@@ -26,7 +26,8 @@ package net.kyori.adventure.text.serializer.spongeapi;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.ComponentSerializer;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
-import net.kyori.adventure.text.serializer.gson.legacyimpl.NBTLegacyHoverEventSerializer;
+import net.kyori.adventure.text.serializer.json.JSONOptions;
+import net.kyori.adventure.text.serializer.json.legacyimpl.NBTLegacyHoverEventSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.spongepowered.api.Platform;
 import org.spongepowered.api.text.Text;
@@ -42,8 +43,11 @@ import static java.util.Objects.requireNonNull;
 public final class SpongeComponentSerializer implements ComponentSerializer<Component, Component, Text> {
   private static final SpongeComponentSerializer INSTANCE = new SpongeComponentSerializer();
   private static final GsonComponentSerializer LEGACY_GSON_SERIALIZER = GsonComponentSerializer.builder()
-    .downsampleColors()
-    .emitLegacyHoverEvent()
+    .options(JSONOptions.schema().stateBuilder()
+      .value(JSONOptions.EMIT_RGB, false)
+      .value(JSONOptions.EMIT_HOVER_EVENT_TYPE, JSONOptions.HoverEventValueMode.ALL)
+      .value(JSONOptions.EMIT_CLICK_EVENT_TYPE, JSONOptions.ClickEventValueMode.CAMEL_CASE)
+      .build())
     .legacyHoverEventSerializer(NBTLegacyHoverEventSerializer.get())
     .build();
 
