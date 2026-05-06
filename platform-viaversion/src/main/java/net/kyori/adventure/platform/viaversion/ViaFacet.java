@@ -28,13 +28,17 @@ import com.viaversion.viaversion.api.connection.UserConnection;
 import com.viaversion.viaversion.api.protocol.Protocol;
 import com.viaversion.viaversion.api.protocol.packet.ClientboundPacketType;
 import com.viaversion.viaversion.api.protocol.packet.PacketWrapper;
-import com.viaversion.viaversion.api.type.Type;
+import com.viaversion.viaversion.api.protocol.packet.State;
+import com.viaversion.viaversion.api.protocol.packet.provider.PacketTypeMap;
+import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
+import com.viaversion.viaversion.api.type.Types;
 import com.viaversion.viaversion.libs.gson.JsonElement;
 import com.viaversion.viaversion.libs.gson.JsonParser;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -46,19 +50,26 @@ import net.kyori.adventure.platform.facet.Facet;
 import net.kyori.adventure.platform.facet.FacetBase;
 import net.kyori.adventure.platform.facet.Knob;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.json.JSONOptions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static net.kyori.adventure.platform.facet.Knob.logError;
 import static net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.colorDownsamplingGson;
-import static net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson;
 
 // Non-API
 @SuppressWarnings({"checkstyle:FilteringWriteTag", "checkstyle:MissingJavadocType", "checkstyle:MissingJavadocMethod"})
 public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String> {
   private static final String PACKAGE = "com.viaversion.viaversion";
-  private static final int SUPPORTED_VIA_MAJOR_VERSION = 4;
+  private static final int SUPPORTED_VIA_MAJOR_VERSION = 5;
   private static final boolean SUPPORTED;
+
+  // The component will go through the ViaVersion pipeline starting from Minecraft 1.16
+  private static final int VERSION_1_16 = 2526; // 20w16a
+  private static final GsonComponentSerializer GSON_SERIALIZER_1_16 = GsonComponentSerializer.builder()
+          .options(JSONOptions.byDataVersion().at(VERSION_1_16))
+          .build();
 
   static {
     boolean supported = false;
@@ -73,12 +84,14 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   }
 
   private final Function<V, UserConnection> connectionFunction;
-  private final int minProtocol;
+  private final ProtocolVersion hexColorProtocol;
+  private final @Nullable ProtocolVersion minProtocol;
 
-  public ViaFacet(final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction, final int minProtocol) {
+  public ViaFacet(final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction, final String minProtocol) {
     super(viewerClass);
     this.connectionFunction = connectionFunction;
-    this.minProtocol = minProtocol;
+    this.hexColorProtocol = ProtocolVersion.getClosest(VERSION_HEX_COLOR);
+    this.minProtocol = ProtocolVersion.getClosest(minProtocol);
   }
 
   @Override
@@ -86,34 +99,36 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     return super.isSupported()
       && SUPPORTED
       && this.connectionFunction != null
-      && this.minProtocol >= 0;
+      && this.minProtocol != null
+      && this.minProtocol.isKnown();
   }
 
   @Override
   public boolean isApplicable(final @NotNull V viewer) {
     return super.isApplicable(viewer)
-      && this.minProtocol > Via.getAPI().getServerVersion().lowestSupportedVersion()
-      && this.findProtocol(viewer) >= this.minProtocol;
+      && this.minProtocol != null
+      && this.minProtocol.newerThan(Via.getAPI().getServerVersion().lowestSupportedProtocolVersion())
+      && this.findProtocol(viewer).newerThanOrEqualTo(this.minProtocol);
   }
 
   public @Nullable UserConnection findConnection(final @NotNull V viewer) {
     return this.connectionFunction.apply(viewer);
   }
 
-  public int findProtocol(final @NotNull V viewer) {
+  public ProtocolVersion findProtocol(final @NotNull V viewer) {
     final UserConnection connection = this.findConnection(viewer);
     if (connection != null) {
-      return connection.getProtocolInfo().getProtocolVersion();
+      return connection.getProtocolInfo().protocolVersion();
     }
-    return -1;
+    return ProtocolVersion.unknown;
   }
 
   @NotNull
   @Override
   public String createMessage(final @NotNull V viewer, final @NotNull Component message) {
-    final int protocol = this.findProtocol(viewer);
-    if (protocol >= PROTOCOL_HEX_COLOR) {
-      return gson().serialize(message);
+    final ProtocolVersion protocol = this.findProtocol(viewer);
+    if (protocol.newerThanOrEqualTo(this.hexColorProtocol)) {
+      return GSON_SERIALIZER_1_16.serialize(message);
     } else {
       return colorDownsamplingGson().serialize(message);
     }
@@ -121,47 +136,41 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
   public static class ProtocolBased<V> extends ViaFacet<V> {
     private final Class<? extends Protocol<?, ?, ?, ?>> protocolClass;
-    private final Class<? extends ClientboundPacketType> packetClass;
-    private final int packetId;
+    private final ClientboundPacketType packetType;
 
     @SuppressWarnings("unchecked")
-    protected ProtocolBased(final @NotNull String fromProtocol, final @NotNull String toProtocol, final int minProtocol, final @NotNull String packetName, final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction) {
+    protected ProtocolBased(final @NotNull String fromProtocol, final @NotNull String toProtocol, final String minProtocol, final @NotNull String packetName, final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction) {
       super(viewerClass, connectionFunction, minProtocol);
 
-      final String protocolClassName = MessageFormat.format("{0}.protocols.protocol{1}to{2}.Protocol{1}To{2}", PACKAGE, fromProtocol, toProtocol);
-      final String packetClassName = MessageFormat.format("{0}.protocols.protocol{1}to{2}.ClientboundPackets{1}", PACKAGE, fromProtocol, toProtocol);
+      final String protocolClassName = MessageFormat.format("{0}.protocols.v{1}to{2}.Protocol{1}To{2}", PACKAGE, fromProtocol, toProtocol);
 
       Class<? extends Protocol<?, ?, ?, ?>> protocolClass = null;
-      Class<? extends ClientboundPacketType> packetClass = null;
-      int packetId = -1;
+      ClientboundPacketType packetType = null;
       try {
         protocolClass = (Class<? extends Protocol<?, ?, ?, ?>>) Class.forName(protocolClassName);
-        packetClass = (Class<? extends ClientboundPacketType>) Class.forName(packetClassName);
-        for (final ClientboundPacketType type : packetClass.getEnumConstants()) {
-          if (type.getName().equals(packetName)) {
-            packetId = type.getId();
-            break;
-          }
+        final Protocol<?, ?, ?, ?> protocol = protocolClass.getDeclaredConstructor().newInstance();
+        final Map<State, ? extends PacketTypeMap<? extends ClientboundPacketType>> packetTypes = protocol.getPacketTypesProvider().mappedClientboundPacketTypes();
+        final PacketTypeMap<? extends ClientboundPacketType> playPacketTypes = packetTypes.get(State.PLAY);
+        if (playPacketTypes != null) {
+          packetType = playPacketTypes.typeByName(packetName);
         }
       } catch (final Throwable error) {
         // No-op, ViaVersion is not loaded
       }
 
       this.protocolClass = protocolClass;
-      this.packetClass = packetClass;
-      this.packetId = packetId;
+      this.packetType = packetType;
     }
 
     @Override
     public boolean isSupported() {
       return super.isSupported()
         && this.protocolClass != null
-        && this.packetClass != null
-        && this.packetId >= 0;
+        && this.packetType != null;
     }
 
     public PacketWrapper createPacket(final @NotNull V viewer) {
-      return PacketWrapper.create(this.packetId, null, this.findConnection(viewer));
+      return PacketWrapper.create(this.packetType, this.findConnection(viewer));
     }
 
     public void sendPacket(final @NotNull PacketWrapper packet) {
@@ -180,15 +189,15 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
   public static class Chat<V> extends ProtocolBased<V> implements ChatPacket<V, String> {
     public Chat(final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction) {
-      super("1_16", "1_15_2", PROTOCOL_HEX_COLOR, "CHAT_MESSAGE", viewerClass, connectionFunction);
+      super("1_15_2", "1_16", VERSION_HEX_COLOR, "CHAT", viewerClass, connectionFunction);
     }
 
     @Override
     public void sendMessage(final @NotNull V viewer, final @NotNull Identity source, final @NotNull String message, final @NotNull Object type) {
       final PacketWrapper packet = this.createPacket(viewer);
-      packet.write(Type.COMPONENT, this.parse(message));
-      packet.write(Type.BYTE, this.createMessageType(type instanceof MessageType ? (MessageType) type : MessageType.SYSTEM));
-      packet.write(Type.UUID, source.uuid());
+      packet.write(Types.COMPONENT, this.parse(message));
+      packet.write(Types.BYTE, this.createMessageType(type instanceof MessageType ? (MessageType) type : MessageType.SYSTEM));
+      packet.write(Types.UUID, source.uuid());
       this.sendPacket(packet);
     }
   }
@@ -211,25 +220,25 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
   public static class ActionBarTitle<V> extends ProtocolBased<V> implements Facet.ActionBar<V, String> {
     public ActionBarTitle(final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction) {
-      super("1_11", "1_10", TitlePacket.PROTOCOL_ACTION_BAR, "TITLE", viewerClass, connectionFunction);
+      super("1_10", "1_11", TitlePacket.VERSION_ACTION_BAR, "SET_TITLES", viewerClass, connectionFunction);
     }
 
     @Override
     public void sendMessage(final @NotNull V viewer, final @NotNull String message) {
       final PacketWrapper packet = this.createPacket(viewer);
-      packet.write(Type.VAR_INT, TitlePacket.ACTION_ACTIONBAR);
-      packet.write(Type.COMPONENT, this.parse(message));
+      packet.write(Types.VAR_INT, TitlePacket.ACTION_ACTIONBAR);
+      packet.write(Types.COMPONENT, this.parse(message));
       this.sendPacket(packet);
     }
   }
 
   public static class Title<V> extends ProtocolBased<V> implements Facet.TitlePacket<V, String, List<Consumer<PacketWrapper>>, Consumer<V>> {
-    protected Title(final @NotNull String fromProtocol, final @NotNull String toProtocol, final int minProtocol, final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction) {
-      super(fromProtocol, toProtocol, minProtocol, "TITLE", viewerClass, connectionFunction);
+    protected Title(final @NotNull String fromProtocol, final @NotNull String toProtocol, final String minProtocol, final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction) {
+      super(fromProtocol, toProtocol, minProtocol, "SET_TITLES", viewerClass, connectionFunction);
     }
 
     public Title(final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction) {
-      this("1_16", "1_15_2", PROTOCOL_HEX_COLOR, viewerClass, connectionFunction);
+      this("1_15_2", "1_16", VERSION_HEX_COLOR, viewerClass, connectionFunction);
     }
 
     @Override
@@ -240,35 +249,35 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     @Override
     public void contributeTitle(final @NotNull List<Consumer<PacketWrapper>> coll, final @NotNull String title) {
       coll.add(packet -> {
-        packet.write(Type.VAR_INT, ACTION_TITLE);
-        packet.write(Type.COMPONENT, this.parse(title));
+        packet.write(Types.VAR_INT, ACTION_TITLE);
+        packet.write(Types.COMPONENT, this.parse(title));
       });
     }
 
     @Override
     public void contributeSubtitle(final @NotNull List<Consumer<PacketWrapper>> coll, final @NotNull String subtitle) {
       coll.add(packet -> {
-        packet.write(Type.VAR_INT, ACTION_SUBTITLE);
-        packet.write(Type.COMPONENT, this.parse(subtitle));
+        packet.write(Types.VAR_INT, ACTION_SUBTITLE);
+        packet.write(Types.COMPONENT, this.parse(subtitle));
       });
     }
 
     @Override
     public void contributeTimes(final @NotNull List<Consumer<PacketWrapper>> coll, final int inTicks, final int stayTicks, final int outTicks) {
       coll.add(packet -> {
-        packet.write(Type.VAR_INT, ACTION_TIMES);
-        packet.write(Type.INT, inTicks);
-        packet.write(Type.INT, stayTicks);
-        packet.write(Type.INT, outTicks);
+        packet.write(Types.VAR_INT, ACTION_TIMES);
+        packet.write(Types.INT, inTicks);
+        packet.write(Types.INT, stayTicks);
+        packet.write(Types.INT, outTicks);
       });
     }
 
     @Override
     public @Nullable Consumer<V> completeTitle(final @NotNull List<Consumer<PacketWrapper>> coll) {
       return v -> {
-        for (int i = 0, length = coll.size(); i < length; i++) {
+        for (final Consumer<PacketWrapper> packetWrapperConsumer : coll) {
           final PacketWrapper pkt = this.createPacket(v);
-          coll.get(i).accept(pkt);
+          packetWrapperConsumer.accept(pkt);
           this.sendPacket(pkt);
         }
       };
@@ -282,14 +291,14 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     @Override
     public void clearTitle(final @NotNull V viewer) {
       final PacketWrapper packet = this.createPacket(viewer);
-      packet.write(Type.VAR_INT, ACTION_CLEAR);
+      packet.write(Types.VAR_INT, ACTION_CLEAR);
       this.sendPacket(packet);
     }
 
     @Override
     public void resetTitle(final @NotNull V viewer) {
       final PacketWrapper packet = this.createPacket(viewer);
-      packet.write(Type.VAR_INT, ACTION_RESET);
+      packet.write(Types.VAR_INT, ACTION_RESET);
       this.sendPacket(packet);
     }
   }
@@ -304,29 +313,29 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     private byte flags;
 
     private BossBar(final @NotNull String fromProtocol, final @NotNull String toProtocol, final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction, final Collection<V> viewers) {
-      super(fromProtocol, toProtocol, PROTOCOL_BOSS_BAR, "BOSSBAR", viewerClass, connectionFunction);
+      super(fromProtocol, toProtocol, VERSION_BOSS_BAR, "BOSS_EVENT", viewerClass, connectionFunction);
       this.viewers = new CopyOnWriteArraySet<>(viewers);
     }
 
     public static class Builder<V> extends ViaFacet<V> implements Facet.BossBar.Builder<V, Facet.BossBar<V>> {
       public Builder(final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction) {
-        super(viewerClass, connectionFunction, PROTOCOL_HEX_COLOR);
+        super(viewerClass, connectionFunction, VERSION_HEX_COLOR);
       }
 
       @Override
       public Facet.@NotNull BossBar<V> createBossBar(final @NotNull Collection<V> viewer) {
-        return new ViaFacet.BossBar<>("1_16", "1_15_2", this.viewerClass, this::findConnection, viewer);
+        return new ViaFacet.BossBar<>("1_15_2", "1_16", this.viewerClass, this::findConnection, viewer);
       }
     }
 
     public static class Builder1_9_To_1_15<V> extends ViaFacet<V> implements Facet.BossBar.Builder<V, Facet.BossBar<V>> {
       public Builder1_9_To_1_15(final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> connectionFunction) {
-        super(viewerClass, connectionFunction, PROTOCOL_BOSS_BAR);
+        super(viewerClass, connectionFunction, VERSION_BOSS_BAR);
       }
 
       @Override
       public Facet.@NotNull BossBar<V> createBossBar(final @NotNull Collection<V> viewer) {
-        return new ViaFacet.BossBar<>("1_9", "1_8", this.viewerClass, this::findConnection, viewer);
+        return new ViaFacet.BossBar<>("1_8", "1_9", this.viewerClass, this::findConnection, viewer);
       }
     }
 
@@ -371,20 +380,20 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
 
     public void sendPacket(final @NotNull V viewer, final int action) {
       final PacketWrapper packet = this.createPacket(viewer);
-      packet.write(Type.UUID, this.id);
-      packet.write(Type.VAR_INT, action);
+      packet.write(Types.UUID, this.id);
+      packet.write(Types.VAR_INT, action);
       if (action == ACTION_ADD || action == ACTION_TITLE) {
-        packet.write(Type.COMPONENT, this.parse(this.title));
+        packet.write(Types.COMPONENT, this.parse(this.title));
       }
       if (action == ACTION_ADD || action == ACTION_HEALTH) {
-        packet.write(Type.FLOAT, this.health);
+        packet.write(Types.FLOAT, this.health);
       }
       if (action == ACTION_ADD || action == ACTION_STYLE) {
-        packet.write(Type.VAR_INT, this.color);
-        packet.write(Type.VAR_INT, this.overlay);
+        packet.write(Types.VAR_INT, this.color);
+        packet.write(Types.VAR_INT, this.overlay);
       }
       if (action == ACTION_ADD || action == ACTION_FLAG) {
-        packet.write(Type.BYTE, this.flags);
+        packet.write(Types.BYTE, this.flags);
       }
       this.sendPacket(packet);
     }
@@ -425,14 +434,14 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   public static final class TabList<V> extends ProtocolBased<V> implements Facet.TabList<V, String> {
 
     public TabList(final @NotNull Class<? extends V> viewerClass, final @NotNull Function<V, UserConnection> userConnection) {
-      super("1_16", "1_15_2", PROTOCOL_HEX_COLOR, "TAB_LIST", viewerClass, userConnection);
+      super("1_15_2", "1_16", VERSION_HEX_COLOR, "TAB_LIST", viewerClass, userConnection);
     }
 
     @Override
     public void send(final V viewer, final @Nullable String header, final @Nullable String footer) {
       final PacketWrapper packet = this.createPacket(viewer);
-      packet.write(Type.COMPONENT, this.parse(header));
-      packet.write(Type.COMPONENT, this.parse(footer));
+      packet.write(Types.COMPONENT, this.parse(header));
+      packet.write(Types.COMPONENT, this.parse(footer));
       this.sendPacket(packet);
     }
   }

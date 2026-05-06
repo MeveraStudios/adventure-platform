@@ -148,6 +148,7 @@ public interface Facet<V> {
    * @since 4.0.0
    */
   interface Message<V, M> extends Facet<V> {
+    String VERSION_HEX_COLOR = "1.16";
     int PROTOCOL_HEX_COLOR = 713; // Added 20w17a
     int PROTOCOL_JSON = 5; // Added 14w02a
 
@@ -242,7 +243,7 @@ public interface Facet<V> {
    * @since 4.0.0
    */
   interface Title<V, M, C, T> extends Message<V, M> {
-    int PROTOCOL_ACTION_BAR = 310; // Added 16w40a
+    String VERSION_ACTION_BAR = "1.11"; // Added 16w40a
     long MAX_SECONDS = Long.MAX_VALUE / 20;
 
     /**
@@ -494,6 +495,7 @@ public interface Facet<V> {
    * @since 4.0.0
    */
   interface BossBar<V> extends net.kyori.adventure.bossbar.BossBar.Listener, Closeable {
+    String VERSION_BOSS_BAR = "1.13";
     int PROTOCOL_BOSS_BAR = 356; // Added 18w05a
 
     /**
