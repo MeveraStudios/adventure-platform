@@ -10,3 +10,6 @@
 /*/*/out/
 /*/build/
 /*/out/
+
+# Project-local gradle.properties, never commit credentials here
+gradle.properties

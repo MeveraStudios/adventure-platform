@@ -27,11 +27,6 @@ dependencyResolutionManagement {
       mavenContent { snapshotsOnly() }
     }
     maven {
-      name = "sponge"
-      url = 'https://repo.spongepowered.org/repository/maven-public/'
-      mavenContent { includeGroup "org.spongepowered" }
-    }
-    maven {
       name = 'viaversion'
       url = 'https://repo.viaversion.com'
       mavenContent { includeGroup "com.viaversion" }
@@ -54,7 +49,7 @@ dependencyResolutionManagement {
   }
 }
 
-['bungeecord', 'legacy-text3'].each {
+['bungeecord'].each {
   include "text-serializer-$it"
   findProject(":text-serializer-$it")?.name = "adventure-text-serializer-$it"
 }
@@ -62,7 +57,7 @@ dependencyResolutionManagement {
 include 'api'
 findProject(':api')?.name = 'adventure-platform-api'
 
-['facet', 'viaversion', 'bukkit', 'bungeecord', 'spongeapi'].each {
+['facet', 'viaversion', 'bukkit', 'bungeecord'].each {
   include "platform-$it"
   findProject(":platform-$it")?.name = "adventure-platform-$it"
 }

@@ -34,7 +34,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import net.kyori.adventure.audience.Audience;
-import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.chat.ChatType;
 import net.kyori.adventure.chat.SignedMessage;
@@ -185,14 +184,12 @@ public class FacetAudience<V> implements Audience, Closeable {
   }
 
   @Override
-  public void sendMessage(final @NotNull Identity source, final @NotNull Component original, final @NotNull MessageType type) {
+  public void sendMessage(final @NotNull Component message) {
     if (this.chat == null) return;
-
-    final Object message = this.createMessage(original, this.chat);
-    if (message == null) return;
-
+    final Object msg = this.createMessage(message, this.chat);
+    if (msg == null) return;
     for (final V viewer : this.viewers) {
-      this.chat.sendMessage(viewer, source, message, type);
+      this.chat.sendMessage(viewer, Identity.nil(), msg, Identity.nil());
     }
   }
 

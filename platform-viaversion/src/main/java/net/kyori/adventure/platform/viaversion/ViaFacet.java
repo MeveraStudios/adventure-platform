@@ -45,7 +45,6 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.platform.facet.Facet;
 import net.kyori.adventure.platform.facet.FacetBase;
@@ -57,7 +56,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static net.kyori.adventure.platform.facet.Knob.logError;
-import static net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.colorDownsamplingGson;
 
 // Non-API
 @SuppressWarnings({"checkstyle:FilteringWriteTag", "checkstyle:MissingJavadocType", "checkstyle:MissingJavadocMethod"})
@@ -71,6 +69,11 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   private static final int VERSION_1_16 = 2526; // 20w16a
   private static final GsonComponentSerializer GSON_SERIALIZER_1_16 = GsonComponentSerializer.builder()
           .options(JSONOptions.byDataVersion().at(VERSION_1_16))
+          .build();
+  private static final GsonComponentSerializer GSON_SERIALIZER_NO_RGB = GsonComponentSerializer.builder()
+          .options(JSONOptions.schema().stateBuilder()
+              .value(JSONOptions.EMIT_RGB, false)
+              .build())
           .build();
 
   static {
@@ -132,7 +135,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     if (protocol.newerThanOrEqualTo(this.hexColorProtocol)) {
       return GSON_SERIALIZER_1_16.serialize(message);
     } else {
-      return colorDownsamplingGson().serialize(message);
+      return GSON_SERIALIZER_NO_RGB.serialize(message);
     }
   }
 
@@ -256,7 +259,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     public void sendMessage(final @NotNull V viewer, final @NotNull Identity source, final @NotNull String message, final @NotNull Object type) {
       final PacketWrapper packet = this.createPacket(viewer);
       packet.write(Types.COMPONENT, this.parse(viewer, message));
-      packet.write(Types.BYTE, this.createMessageType(type instanceof MessageType ? (MessageType) type : MessageType.SYSTEM));
+      packet.write(Types.BYTE, this.createMessageType(type));
       packet.write(Types.UUID, source.uuid());
       this.sendPacket(packet);
     }
@@ -268,13 +271,13 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
     }
 
     @Override
-    public byte createMessageType(final @NotNull MessageType type) {
+    public byte createMessageType(final @NotNull Object type) {
       return TYPE_ACTION_BAR;
     }
 
     @Override
     public void sendMessage(final @NotNull V viewer, final @NotNull String message) {
-      this.sendMessage(viewer, Identity.nil(), message, MessageType.CHAT);
+      this.sendMessage(viewer, Identity.nil(), message, null);
     }
   }
 

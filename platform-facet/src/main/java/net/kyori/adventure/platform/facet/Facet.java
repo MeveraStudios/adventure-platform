@@ -31,7 +31,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
-import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.sound.SoundStop;
 import net.kyori.adventure.text.Component;
@@ -204,13 +203,7 @@ public interface Facet<V> {
      * @return an ordinal
      * @since 4.0.0
      */
-    default byte createMessageType(final @NotNull MessageType type) {
-      if (type == MessageType.CHAT) {
-        return TYPE_CHAT;
-      } else if (type == MessageType.SYSTEM) {
-        return TYPE_SYSTEM;
-      }
-      logUnsupported(this, type);
+    default byte createMessageType(final @NotNull Object type) {
       return TYPE_CHAT;
     }
   }

@@ -29,7 +29,6 @@ import net.kyori.adventure.platform.facet.FacetComponentFlattener;
 import net.kyori.adventure.text.flattener.ComponentFlattener;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.json.JSONOptions;
-import net.kyori.adventure.text.serializer.json.legacyimpl.NBTLegacyHoverEventSerializer;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -67,7 +66,6 @@ public final class BukkitComponentSerializer {
               .build();
     } else {
       GSON_SERIALIZER = GsonComponentSerializer.builder()
-              .legacyHoverEventSerializer(NBTLegacyHoverEventSerializer.get())
               .options(JSONOptions.byDataVersion().at(0))
               .build();
     }

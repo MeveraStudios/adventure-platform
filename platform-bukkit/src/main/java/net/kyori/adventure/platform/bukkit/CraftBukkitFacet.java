@@ -52,7 +52,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
-import net.kyori.adventure.audience.MessageType;
 import net.kyori.adventure.chat.ChatType;
 import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.nbt.BinaryTagIO;
@@ -350,7 +349,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
 
     @Override
     public void sendMessage(final @NotNull CommandSender viewer, final @NotNull Identity source, final @NotNull Object message, final @NotNull Object type) {
-      final Object messageType = type == MessageType.CHAT ? MESSAGE_TYPE_CHAT : MESSAGE_TYPE_SYSTEM;
+      final Object messageType = MESSAGE_TYPE_SYSTEM;
       try {
         this.sendMessage(viewer, CHAT_PACKET_CONSTRUCTOR.invoke(message, messageType, source.uuid()));
       } catch (final Throwable error) {
@@ -873,7 +872,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     private static CompoundBinaryTag tagFor(final @NotNull String title, final @NotNull String author, final @NotNull Iterable<Object> pages) {
       final ListBinaryTag.Builder<StringBinaryTag> builder = ListBinaryTag.builder(BinaryTagTypes.STRING);
       for (final Object page : pages) {
-        builder.add(StringBinaryTag.of((String) page));
+        builder.add(StringBinaryTag.stringBinaryTag((String) page));
       }
       return CompoundBinaryTag.builder()
         .putString(BOOK_TITLE, title)
