@@ -24,14 +24,14 @@ In the meantime, artifacts are available on [GraveMC's repository](https://repo.
 <dependency>
   <groupId>studio.mevera.adventure</groupId>
   <artifactId>adventure-platform-bukkit</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 </dependency>
 
 <!-- BungeeCord -->
 <dependency>
   <groupId>studio.mevera.adventure</groupId>
   <artifactId>adventure-platform-bungeecord</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 </dependency>
 ```
 
@@ -43,9 +43,9 @@ repositories {
 }
 
 dependencies {
-  implementation("studio.mevera.adventure:adventure-platform-bukkit:1.0.0")
+  implementation("studio.mevera.adventure:adventure-platform-bukkit:1.0.1")
   // or
-  implementation("studio.mevera.adventure:adventure-platform-bungeecord:1.0.0")
+  implementation("studio.mevera.adventure:adventure-platform-bungeecord:1.0.1")
 }
 ```
 

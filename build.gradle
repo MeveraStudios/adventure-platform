@@ -14,7 +14,7 @@ plugins {
 ext.adventure = "5.1.1"
 
 group = 'studio.mevera.adventure'
-version = '1.0.0'
+version = '1.0.1'
 description = 'Legacy platform integrations for the adventure UI library'
 
 /**
@@ -111,22 +111,23 @@ subprojects {
       // Credentials via ~/.gradle/gradle.properties (gravemcUsername / gravemcPassword)
       // or env vars MAVEN_REPO_USERNAME / MAVEN_REPO_PASSWORD.
       // Do NOT put credentials in the project-level gradle.properties — it is gitignored.
-      maven {
-        name = 'gravemcReleases'
-        url = 'https://repo.gravemc.net/releases/'
-        def user = project.findProperty('gravemcUsername') ?: System.getenv('MAVEN_REPO_USERNAME')
-        def pass = project.findProperty('gravemcPassword') ?: System.getenv('MAVEN_REPO_PASSWORD')
-        if (user != null && pass != null) {
-          credentials {
-            username = user
-            password = pass
-          }
-        }
-      }
       if ((version as String).endsWith("SNAPSHOT")) {
         maven {
           name = 'gravemcSnapshots'
           url = 'https://repo.gravemc.net/snapshots/'
+          def user = project.findProperty('gravemcUsername') ?: System.getenv('MAVEN_REPO_USERNAME')
+          def pass = project.findProperty('gravemcPassword') ?: System.getenv('MAVEN_REPO_PASSWORD')
+          if (user != null && pass != null) {
+            credentials {
+              username = user
+              password = pass
+            }
+          }
+        }
+      } else {
+        maven {
+          name = 'gravemcReleases'
+          url = 'https://repo.gravemc.net/releases/'
           def user = project.findProperty('gravemcUsername') ?: System.getenv('MAVEN_REPO_USERNAME')
           def pass = project.findProperty('gravemcPassword') ?: System.getenv('MAVEN_REPO_PASSWORD')
           if (user != null && pass != null) {
