@@ -1,17 +1,73 @@
 # adventure-platform
 
-![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/PaperMC/adventure-platform/ci.yaml?branch=main) [![MIT License](https://img.shields.io/badge/license-MIT-blue)](license.txt) [![Maven Central](https://img.shields.io/maven-central/v/net.kyori/adventure-platform-api?label=stable)](https://search.maven.org/search?q=g:net.kyori%20AND%20a:adventure*) ![Maven snapshots](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fcentral.sonatype.com%2Frepository%2Fmaven-snapshots%2Fnet%2Fkyori%2Fadventure-platform-api%2Fmaven-metadata.xml&strategy=highestVersion&label=dev)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue)](license.txt)
 
-Adventure platform implementations, for servers and proxies including [Paper](https://papermc.io)/Spigot/Bukkit, [BungeeCord](https://www.spigotmc.org/go/bungeecord), and [SpongeAPI 7](https://spongepowered.org). Other platforms may be supported through native integration, or other libraries.
+Adventure platform implementations, for servers and proxies including [Paper](https://papermc.io)/Spigot/Bukkit and [BungeeCord](https://www.spigotmc.org/go/bungeecord). Other platforms may be supported through native integration, or other libraries.
 
-See the [documentation](https://docs.papermc.io/adventure/platform/) for usage and dependency information for this project and the main `adventure` library.
+This is a fork of the original [adventure-platform](https://github.com/PaperMC/adventure-platform) (now archived), maintained independently. Sponge support has been removed.
 
-### Contributing
+## Dependency
 
-We appreciate contributions of any type. For any new features or typo-fix/style changes, please open an issue or come talk to us in our [Discord] first so we make sure you're going in the right direction for the project.
+**Group:** `studio.mevera.adventure`. Maven Central publishing coming soon.
 
-All the adventure projects are built with Gradle, require at least JDK 8, and use a common checkstyle configuration. Please make sure all tests pass, license headers are updated, and checkstyle passes to help us review your contribution.
+In the meantime, artifacts are available on [GraveMC's repository](https://repo.gravemc.net):
+
+```xml
+<repository>
+  <id>gravemc-releases</id>
+  <url>https://repo.gravemc.net/releases/</url>
+</repository>
+```
+
+```xml
+<!-- Bukkit/Spigot/Paper -->
+<dependency>
+  <groupId>studio.mevera.adventure</groupId>
+  <artifactId>adventure-platform-bukkit</artifactId>
+  <version>1.0.0</version>
+</dependency>
+
+<!-- BungeeCord -->
+<dependency>
+  <groupId>studio.mevera.adventure</groupId>
+  <artifactId>adventure-platform-bungeecord</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
+Gradle (Kotlin DSL):
+
+```kotlin
+repositories {
+  maven("https://repo.gravemc.net/releases/")
+}
+
+dependencies {
+  implementation("studio.mevera.adventure:adventure-platform-bukkit:1.0.0")
+  // or
+  implementation("studio.mevera.adventure:adventure-platform-bungeecord:1.0.0")
+}
+```
+
+## Modules
+
+| Artifact                               | Description                |
+|----------------------------------------|----------------------------|
+| `adventure-platform-api`               | Core API                   |
+| `adventure-platform-bukkit`            | Bukkit / Spigot / Paper    |
+| `adventure-platform-bungeecord`        | BungeeCord                 |
+| `adventure-platform-facet`             | Shared facet layer         |
+| `adventure-platform-viaversion`        | ViaVersion bridge          |
+| `adventure-text-serializer-bungeecord` | BungeeCord text serializer |
+
+## Building
+
+Requires JDK 21+.
+
+```
+./gradlew build
+```
+
+## License
 
 `adventure-platform` is released under the terms of the [MIT License](license.txt).
-
-[Discord]: https://discord.gg/papermc
