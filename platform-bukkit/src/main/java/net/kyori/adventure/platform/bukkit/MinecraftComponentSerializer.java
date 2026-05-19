@@ -24,7 +24,6 @@
 package net.kyori.adventure.platform.bukkit;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -315,11 +314,11 @@ public final class MinecraftComponentSerializer implements ComponentSerializer<C
     if (!SUPPORTED) throw INITIALIZATION_ERROR.get();
 
     if (TEXT_SERIALIZER_DESERIALIZE_TREE != null || MC_TEXT_GSON != null) {
-      final JsonElement json = gson().serializer().toJsonTree(component);
+      final String json = gson().serialize(component);
       try {
         if (TEXT_SERIALIZER_DESERIALIZE_TREE != null) {
-          final Object unRelocatedJsonElement = PARSE_JSON.invoke(JSON_PARSER_INSTANCE, json.toString());
-          return TEXT_SERIALIZER_DESERIALIZE_TREE.invoke(unRelocatedJsonElement);
+          final Object parsedJsonElement = PARSE_JSON.invoke(JSON_PARSER_INSTANCE, json);
+          return TEXT_SERIALIZER_DESERIALIZE_TREE.invoke(parsedJsonElement);
         }
         return ((Gson) MC_TEXT_GSON).fromJson(json, CLASS_CHAT_COMPONENT);
       } catch (final Throwable error) {
@@ -327,9 +326,10 @@ public final class MinecraftComponentSerializer implements ComponentSerializer<C
       }
     } else {
       try {
-        if (COMPONENTSERIALIZATION_CODEC_DECODE != null && CREATE_SERIALIZATION_CONTEXT != null) {
+        if (COMPONENTSERIALIZATION_CODEC_DECODE != null && CREATE_SERIALIZATION_CONTEXT != null && PARSE_JSON != null) {
           final Object serializationContext = CREATE_SERIALIZATION_CONTEXT.bindTo(REGISTRY_ACCESS).invoke(JSON_OPS_INSTANCE);
-          final Object result = COMPONENTSERIALIZATION_CODEC_DECODE.invoke(serializationContext, gson().serializeToTree(component));
+          final Object parsedJsonElement = PARSE_JSON.invoke(JSON_PARSER_INSTANCE, gson().serialize(component));
+          final Object result = COMPONENTSERIALIZATION_CODEC_DECODE.invoke(serializationContext, parsedJsonElement);
           final Method getOrThrow = result.getClass().getMethod("getOrThrow", java.util.function.Function.class);
           final Object pair = getOrThrow.invoke(result, (java.util.function.Function<Throwable, RuntimeException>) RuntimeException::new);
           final Method getFirst = pair.getClass().getMethod("getFirst");
