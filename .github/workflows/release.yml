@@ -15,7 +15,7 @@ jobs:
           cache: gradle
 
       - name: Publish to Maven Central
-        run: ./gradlew publishAndReleaseToMavenCentral
+        run: ./gradlew publishAndReleaseToMavenCentral --info --stacktrace
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_PASSWORD }}
