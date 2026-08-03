@@ -17,10 +17,11 @@ jobs:
           cache: gradle
 
       - name: Build & test
-        run: ./gradlew test
+        run: ./gradlew build
 
       - name: Publish snapshots
-        if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
+        # Pull requests only build; every push to main or master publishes a snapshot
+        if: ${{ github.event_name == 'push' }}
         env:
           SNAPSHOT_BUILD: true
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_USERNAME }}
