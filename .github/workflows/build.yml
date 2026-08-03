@@ -27,4 +27,4 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
-        run: ./gradlew publishAllPublicationsToMavenCentralRepository --info
+        run: ./gradlew publishAllPublicationsToMavenCentralRepository --info --stacktrace
