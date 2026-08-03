@@ -34,6 +34,7 @@ import net.kyori.adventure.platform.facet.Facet;
 import net.kyori.adventure.platform.facet.FacetBase;
 import net.kyori.adventure.platform.facet.FacetComponentFlattener;
 import net.kyori.adventure.platform.facet.FacetPointers;
+import net.kyori.adventure.platform.facet.ObjectComponentDownsampler;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.flattener.ComponentFlattener;
 import net.kyori.adventure.text.serializer.bungeecord.BungeeComponentSerializer;
@@ -99,7 +100,7 @@ class BungeeFacet<V extends CommandSender> extends FacetBase<V> {
 
     @Override
     public BaseComponent @NotNull[] createMessage(final @NotNull CommandSender viewer, final @NotNull Component message) {
-      return LEGACY.serialize(message);
+      return LEGACY.serialize(ObjectComponentDownsampler.downsample(message));
     }
 
     @Override
@@ -115,10 +116,12 @@ class BungeeFacet<V extends CommandSender> extends FacetBase<V> {
 
     @Override
     public BaseComponent @NotNull[] createMessage(final @NotNull ProxiedPlayer viewer, final @NotNull Component message) {
-      if (viewer.getPendingConnection().getVersion() >= PROTOCOL_HEX_COLOR) {
-        return MODERN.serialize(message);
+      final int protocol = viewer.getPendingConnection().getVersion();
+      final Component downsampled = protocol >= PROTOCOL_OBJECT_COMPONENT ? message : ObjectComponentDownsampler.downsample(message);
+      if (protocol >= PROTOCOL_HEX_COLOR) {
+        return MODERN.serialize(downsampled);
       } else {
-        return LEGACY.serialize(message);
+        return LEGACY.serialize(downsampled);
       }
     }
   }

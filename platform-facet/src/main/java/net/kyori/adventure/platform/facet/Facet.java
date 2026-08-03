@@ -150,6 +150,8 @@ public interface Facet<V> {
     String VERSION_HEX_COLOR = "1.16";
     int PROTOCOL_HEX_COLOR = 713; // Added 20w17a
     int PROTOCOL_JSON = 5; // Added 14w02a
+    String VERSION_OBJECT_COMPONENT = "1.21.9";
+    int PROTOCOL_OBJECT_COMPONENT = 773; // Added 1.21.9
 
     /**
      * Creates a message.

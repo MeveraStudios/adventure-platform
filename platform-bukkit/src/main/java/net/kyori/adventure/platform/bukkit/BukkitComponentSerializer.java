@@ -26,6 +26,8 @@ package net.kyori.adventure.platform.bukkit;
 import java.util.Collection;
 import net.kyori.adventure.platform.facet.Facet;
 import net.kyori.adventure.platform.facet.FacetComponentFlattener;
+import net.kyori.adventure.platform.facet.ObjectComponentDownsampler;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.flattener.ComponentFlattener;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.json.JSONOptions;
@@ -49,6 +51,10 @@ public final class BukkitComponentSerializer {
   private static final boolean IS_1_13 = findEnum(Material.class, "BLUE_ICE") != null;
   private static final boolean IS_1_16 = findEnum(Material.class, "NETHERITE_PICKAXE") != null;
 
+  // Object components (sprites and player heads) were added in 1.21.9, clients before that cannot decode them
+  private static final int DATA_VERSION_1_21_9 = 4554;
+  private static final boolean SUPPORTS_OBJECT_COMPONENT;
+
   private static final Collection<FacetComponentFlattener.Translator<Server>> TRANSLATORS = Facet.of(
     SpigotFacet.Translator::new,
     CraftBukkitFacet.Translator::new
@@ -61,10 +67,13 @@ public final class BukkitComponentSerializer {
     FLATTENER = FacetComponentFlattener.get(Bukkit.getServer(), TRANSLATORS);
 
     if (IS_1_13) {
+      final int dataVersion = Bukkit.getUnsafe().getDataVersion();
+      SUPPORTS_OBJECT_COMPONENT = dataVersion >= DATA_VERSION_1_21_9;
       GSON_SERIALIZER = GsonComponentSerializer.builder()
-              .options(JSONOptions.byDataVersion().at(Bukkit.getUnsafe().getDataVersion()))
+              .options(JSONOptions.byDataVersion().at(dataVersion))
               .build();
     } else {
+      SUPPORTS_OBJECT_COMPONENT = false;
       GSON_SERIALIZER = GsonComponentSerializer.builder()
               .options(JSONOptions.byDataVersion().at(0))
               .build();
@@ -104,5 +113,15 @@ public final class BukkitComponentSerializer {
    */
   public static @NotNull GsonComponentSerializer gson() {
     return GSON_SERIALIZER;
+  }
+
+  /**
+   * Replaces object components with their text representation, if this server predates them.
+   *
+   * @param message a message
+   * @return a message this server's clients can decode
+   */
+  static @NotNull Component downsample(final @NotNull Component message) {
+    return SUPPORTS_OBJECT_COMPONENT ? message : ObjectComponentDownsampler.downsample(message);
   }
 }

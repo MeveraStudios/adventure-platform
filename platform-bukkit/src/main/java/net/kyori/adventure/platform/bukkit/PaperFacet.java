@@ -35,6 +35,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static net.kyori.adventure.platform.bukkit.BukkitComponentSerializer.downsample;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findClass;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findStaticMethod;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.hasClass;
@@ -179,7 +180,7 @@ class PaperFacet<V extends CommandSender> extends FacetBase<V> {
     @Override
     public @Nullable Object createMessage(final @NotNull Player viewer, final @NotNull Component message) {
       try {
-        return NATIVE_GSON_COMPONENT_SERIALIZER_DESERIALIZE_METHOD_BOUND.invoke(GsonComponentSerializer.gson().serialize(message));
+        return NATIVE_GSON_COMPONENT_SERIALIZER_DESERIALIZE_METHOD_BOUND.invoke(GsonComponentSerializer.gson().serialize(downsample(message)));
       } catch (final Throwable throwable) {
         logError(throwable, "Failed to create native Component message");
         return null;

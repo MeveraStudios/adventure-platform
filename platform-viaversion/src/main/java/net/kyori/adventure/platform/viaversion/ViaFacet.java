@@ -49,6 +49,7 @@ import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.platform.facet.Facet;
 import net.kyori.adventure.platform.facet.FacetBase;
 import net.kyori.adventure.platform.facet.Knob;
+import net.kyori.adventure.platform.facet.ObjectComponentDownsampler;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.json.JSONOptions;
@@ -64,6 +65,7 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   private static final int SUPPORTED_VIA_MAJOR_VERSION = 5;
   private static final boolean SUPPORTED;
   private static final ProtocolVersion VERSION_TRANSLATION_KEYS = ProtocolVersion.getClosest("1.13");
+  private static final @Nullable ProtocolVersion OBJECT_COMPONENT_PROTOCOL = ProtocolVersion.getClosest(VERSION_OBJECT_COMPONENT);
 
   // The component will go through the ViaVersion pipeline starting from Minecraft 1.16
   private static final int VERSION_1_16 = 2526; // 20w16a
@@ -132,10 +134,14 @@ public class ViaFacet<V> extends FacetBase<V> implements Facet.Message<V, String
   @Override
   public String createMessage(final @NotNull V viewer, final @NotNull Component message) {
     final ProtocolVersion protocol = this.findProtocol(viewer);
+    // Object components cannot be decoded by clients older than 1.21.9, replace them with their text representation
+    final Component downsampled = OBJECT_COMPONENT_PROTOCOL != null && protocol.newerThanOrEqualTo(OBJECT_COMPONENT_PROTOCOL)
+      ? message
+      : ObjectComponentDownsampler.downsample(message);
     if (protocol.newerThanOrEqualTo(this.hexColorProtocol)) {
-      return GSON_SERIALIZER_1_16.serialize(message);
+      return GSON_SERIALIZER_1_16.serialize(downsampled);
     } else {
-      return GSON_SERIALIZER_NO_RGB.serialize(message);
+      return GSON_SERIALIZER_NO_RGB.serialize(downsampled);
     }
   }
 

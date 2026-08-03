@@ -88,6 +88,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.lang.invoke.MethodHandles.dropArguments;
 import static java.lang.invoke.MethodHandles.insertArguments;
 import static java.lang.invoke.MethodType.methodType;
+import static net.kyori.adventure.platform.bukkit.BukkitComponentSerializer.downsample;
 import static net.kyori.adventure.platform.bukkit.BukkitComponentSerializer.gson;
 import static net.kyori.adventure.platform.bukkit.BukkitComponentSerializer.legacy;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findClass;
@@ -209,7 +210,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     @Override
     public Object createMessage(final @NotNull V viewer, final @NotNull Component message) {
       try {
-        return MinecraftComponentSerializer.get().serialize(message);
+        return MinecraftComponentSerializer.get().serialize(downsample(message));
       } catch (final Throwable error) {
         logError(error, "Failed to serialize net.minecraft.server IChatBaseComponent: %s", message);
         return null;
@@ -840,7 +841,7 @@ class CraftBukkitFacet<V extends CommandSender> extends FacetBase<V> {
     @NotNull
     @Override
     public String createMessage(final @NotNull Player viewer, final @NotNull Component message) {
-      return gson().serialize(message);
+      return gson().serialize(downsample(message));
     }
 
     @NotNull

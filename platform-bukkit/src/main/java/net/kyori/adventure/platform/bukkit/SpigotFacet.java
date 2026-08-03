@@ -42,6 +42,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static net.kyori.adventure.platform.bukkit.BukkitComponentSerializer.downsample;
 import static net.kyori.adventure.platform.bukkit.BukkitComponentSerializer.gson;
 import static net.kyori.adventure.platform.bukkit.BukkitComponentSerializer.legacy;
 import static net.kyori.adventure.platform.bukkit.MinecraftReflection.findClass;
@@ -74,7 +75,7 @@ class SpigotFacet<V extends CommandSender> extends FacetBase<V> {
 
     @Override
     public @NotNull BaseComponent@NotNull[] createMessage(final @NotNull V viewer, final @NotNull Component message) {
-      return SERIALIZER.serialize(message);
+      return SERIALIZER.serialize(downsample(message));
     }
   }
 
