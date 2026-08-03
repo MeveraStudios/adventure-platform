@@ -8,13 +8,15 @@ plugins {
   id 'net.kyori.indra' version "$indraVersion" apply false
   id 'net.kyori.indra.licenser.spotless' version "$indraVersion" apply false
   id 'net.kyori.indra.crossdoc' version "$indraVersion" apply false
+  id 'com.vanniktech.maven.publish' version '0.37.0' apply false
 }
 
 // Adventure version
 ext.adventure = "5.2.0"
 
 group = 'studio.mevera.adventure'
-version = '1.0.2'
+// CI sets SNAPSHOT_BUILD on pushes to main, releases build the plain version
+version = System.getenv('SNAPSHOT_BUILD') == 'true' ? '1.0.2-SNAPSHOT' : '1.0.2'
 description = 'Legacy platform integrations for the adventure UI library'
 
 /**
@@ -43,14 +45,11 @@ subprojects {
 
   apply plugin: 'net.kyori.indra'
   apply plugin: 'maven-publish'
+  apply plugin: 'com.vanniktech.maven.publish'
   apply plugin: 'net.kyori.indra.checkstyle'
   apply plugin: 'net.kyori.indra.licenser.spotless'
   apply plugin: 'net.kyori.indra.crossdoc'
 
-  java {
-    withSourcesJar()
-    withJavadocJar()
-  }
 
   dependencies {
     components {
@@ -80,7 +79,7 @@ subprojects {
       testWith(21, 25)
     }
 
-    github("PaperMC", "adventure-platform") {
+    github("MeveraStudios", "adventure-platform") {
       ci(true)
     }
     mitLicense()
@@ -93,51 +92,46 @@ subprojects {
       }
   }
 
-  publishing {
-    publications {
-      maven(MavenPublication) {
-        from components.java
-        pom {
-          developers {
-            developer {
-              id = 'iiahmedyt'
-              timezone = 'Egypt/Cairo'
-            }
-          }
+  mavenPublishing {
+    // indra already registers the sources and javadoc jars Maven Central requires, and both are
+    // part of the java component, so the publish plugin must not add competing copies of them.
+    configure(new com.vanniktech.maven.publish.JavaLibrary(new com.vanniktech.maven.publish.JavadocJar.None(), true))
+
+    coordinates(project.group as String, project.name, project.version as String)
+
+    pom {
+      name = project.name
+      description = project.description ?: rootProject.description
+      inceptionYear = '2018'
+      url = 'https://github.com/MeveraStudios/adventure-platform/'
+      licenses {
+        license {
+          name = 'MIT'
+          url = 'https://opensource.org/licenses/MIT'
+          distribution = 'https://mit-license.org/'
         }
+      }
+      developers {
+        developer {
+          id = 'iiahmedyt'
+          name = 'iiAhmedYT'
+          url = 'https://github.com/iiAhmedYT/'
+          timezone = 'Egypt/Cairo'
+        }
+      }
+      scm {
+        url = 'https://github.com/MeveraStudios/adventure-platform/'
+        connection = 'scm:git:git://github.com/MeveraStudios/adventure-platform.git'
+        developerConnection = 'scm:git:ssh://git@github.com/MeveraStudios/adventure-platform.git'
       }
     }
-    repositories {
-      // Credentials via ~/.gradle/gradle.properties (gravemcUsername / gravemcPassword)
-      // or env vars MAVEN_REPO_USERNAME / MAVEN_REPO_PASSWORD.
-      // Do NOT put credentials in the project-level gradle.properties — it is gitignored.
-      if ((version as String).endsWith("SNAPSHOT")) {
-        maven {
-          name = 'gravemcSnapshots'
-          url = 'https://repo.gravemc.net/snapshots/'
-          def user = project.findProperty('gravemcUsername') ?: System.getenv('MAVEN_REPO_USERNAME')
-          def pass = project.findProperty('gravemcPassword') ?: System.getenv('MAVEN_REPO_PASSWORD')
-          if (user != null && pass != null) {
-            credentials {
-              username = user
-              password = pass
-            }
-          }
-        }
-      } else {
-        maven {
-          name = 'gravemcReleases'
-          url = 'https://repo.gravemc.net/releases/'
-          def user = project.findProperty('gravemcUsername') ?: System.getenv('MAVEN_REPO_USERNAME')
-          def pass = project.findProperty('gravemcPassword') ?: System.getenv('MAVEN_REPO_PASSWORD')
-          if (user != null && pass != null) {
-            credentials {
-              username = user
-              password = pass
-            }
-          }
-        }
-      }
+
+    publishToMavenCentral()
+
+    // Signing key comes from ORG_GRADLE_PROJECT_signingInMemoryKey in CI.
+    // Without it, publishing to maven local still works unsigned.
+    if (project.findProperty('signingInMemoryKey') != null) {
+      signAllPublications()
     }
   }
 }

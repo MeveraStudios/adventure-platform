@@ -8,30 +8,21 @@ This is a fork of the original [adventure-platform](https://github.com/PaperMC/a
 
 ## Dependency
 
-**Group:** `studio.mevera.adventure`. Maven Central publishing coming soon.
-
-In the meantime, artifacts are available on [GraveMC's repository](https://repo.gravemc.net):
-
-```xml
-<repository>
-  <id>gravemc-releases</id>
-  <url>https://repo.gravemc.net/releases/</url>
-</repository>
-```
+**Group:** `studio.mevera.adventure`. Published to Maven Central, no extra repository needed.
 
 ```xml
 <!-- Bukkit/Spigot/Paper -->
 <dependency>
   <groupId>studio.mevera.adventure</groupId>
   <artifactId>adventure-platform-bukkit</artifactId>
-  <version>1.0.1</version>
+  <version>1.0.2</version>
 </dependency>
 
 <!-- BungeeCord -->
 <dependency>
   <groupId>studio.mevera.adventure</groupId>
   <artifactId>adventure-platform-bungeecord</artifactId>
-  <version>1.0.1</version>
+  <version>1.0.2</version>
 </dependency>
 ```
 
@@ -39,13 +30,13 @@ Gradle (Kotlin DSL):
 
 ```kotlin
 repositories {
-  maven("https://repo.gravemc.net/releases/")
+  mavenCentral()
 }
 
 dependencies {
-  implementation("studio.mevera.adventure:adventure-platform-bukkit:1.0.1")
+  implementation("studio.mevera.adventure:adventure-platform-bukkit:1.0.2")
   // or
-  implementation("studio.mevera.adventure:adventure-platform-bungeecord:1.0.1")
+  implementation("studio.mevera.adventure:adventure-platform-bungeecord:1.0.2")
 }
 ```
 

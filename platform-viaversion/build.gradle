@@ -10,7 +10,8 @@ dependencies {
 
 publishing {
   publications {
-    it.named("maven", MavenPublication.class).configure {
+    // Registered by the publish plugin after this file is evaluated, so configure it lazily
+    withType(MavenPublication.class).configureEach {
       // Apply dependency hack for maven consumers
       pom.withXml() {
         asNode().dependencies.'*'.findAll() {
